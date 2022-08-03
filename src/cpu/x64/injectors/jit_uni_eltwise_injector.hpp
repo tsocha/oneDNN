@@ -265,6 +265,17 @@ private:
         exp_ln_flt_max_f, // logf(FLT_MAX) - max normal value
         exp_ln_flt_min_f, // logf(FLT_MIN) - min normal value
         exp_pol, // see correspondent table for float values
+        poly_0, //
+        poly_1, //
+        poly_2, //
+        poly_3, //
+        poly_4, //
+        poly_56, //
+        log2rec, //
+        log2hi, //
+        log2lo, //
+        lower_range, //
+        rounding_bias, //
         // e^(2*x)+2*e^x+2 = FLT_MAX; x =~ 44.36141952603634
         fwd_mish_max_x_for_equation_f,
         // e^x(e^3x+4e^2x+e^x*(6+4*x)+4*(1+x)) = FLT_MAX; x =~ 22.18070976278534

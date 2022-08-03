@@ -851,6 +851,18 @@ public:
             vaddps(x1, x1, op);
         }
     }
+    void uni_vscalefps(const Xbyak::Xmm &x1, const Xbyak::Xmm &x2,
+            const Xbyak::Operand &op) {
+        vscalefps(x1, x2, op);
+    }
+    void uni_vscalefps(const Xbyak::Ymm &x1, const Xbyak::Ymm &x2,
+            const Xbyak::Operand &op) {
+        vscalefps(x1, x2, op);
+    }
+    void uni_vscalefps(const Xbyak::Zmm &x1, const Xbyak::Zmm &x2,
+            const Xbyak::Operand &op) {
+        vscalefps(x1, x2, op);
+    }
 
     void uni_vfmadd213ss(const Xbyak::Xmm &x1, const Xbyak::Xmm &x2,
             const Xbyak::Operand &op) {

@@ -261,25 +261,40 @@ void jit_uni_eltwise_injector_f32<isa, Wmm>::exp_compute_vector_fwd(
     // = 2^n * exp(r) // simplify the exp(n*ln(2)) expression
 
     // get mask of values lower than log(FLT_MIN) to zero them in the output
-    compute_cmp_mask(vmm_src, table_val(exp_ln_flt_min_f), _cmp_lt_os);
+    //compute_cmp_mask(vmm_src, table_val(exp_ln_flt_min_f), _cmp_lt_os);
 
-    h->uni_vminps(vmm_src, vmm_src, table_val(exp_ln_flt_max_f));
-    h->uni_vmaxps(vmm_src, vmm_src, table_val(exp_ln_flt_min_f));
-    h->uni_vmovups(vmm_aux1, vmm_src);
+    h->uni_vmaxps(vmm_src, vmm_src, table_val(lower_range));
 
-    // calculate exp(x)
-    // fx = x * log2ef + 0.5
-    h->uni_vmulps(vmm_src, vmm_src, table_val(exp_log2ef));
-    h->uni_vaddps(vmm_src, vmm_src, table_val(half));
+    //vfmadd213ps
+    //auto m = Log2Rec * clamped_data + RoundingBias;
+
+    h->uni_vmulps(vmm_aux1, vmm_src, table_val(log2rec));
+    h->uni_vaddps(vmm_aux1, vmm_aux1, table_val(rounding_bias));
+    h->uni_vsubps(vmm_aux1, vmm_aux1, table_val(rounding_bias));
+
+    h->uni_vfmadd231ps(vmm_src, vmm_aux1, table_val(log2hi));
+    h->uni_vfmadd231ps(vmm_src, vmm_aux1, table_val(log2lo));
+    
+    // x += m * Log2Hi;
+    // x += m * Log2Lo;
+
+    // h->uni_vminps(vmm_src, vmm_src, table_val(exp_ln_flt_max_f));
+    // h->uni_vmaxps(vmm_src, vmm_src, table_val(exp_ln_flt_min_f));
+    // h->uni_vmovups(vmm_aux1, vmm_src);
+
+    // // calculate exp(x)
+    // // fx = x * log2ef + 0.5
+    // h->uni_vmulps(vmm_src, vmm_src, table_val(exp_log2ef));
+    // h->uni_vaddps(vmm_src, vmm_src, table_val(half));
 
     // tmp = floorf(fx)
-    h->uni_vroundps(vmm_aux2, vmm_src, _op_floor);
+    // h->uni_vroundps(vmm_aux2, vmm_src, _op_floor);
 
     // keep vmm_src = fx for further computations
-    h->uni_vmovups(vmm_src, vmm_aux2);
+    // h->uni_vmovups(vmm_src, vmm_aux2);
 
     // x = x - fx * ln2
-    h->uni_vfnmadd231ps(vmm_aux1, vmm_aux2, table_val(ln2f));
+    // h->uni_vfnmadd231ps(vmm_aux1, vmm_aux2, table_val(ln2f));
 
     // We do not count 2^n here, because n can reach 128 and 2^128 is not
     // representable by fp32, so to get around this problem, instead of computing
@@ -287,34 +302,37 @@ void jit_uni_eltwise_injector_f32<isa, Wmm>::exp_compute_vector_fwd(
     // and 2 are numbers representable in fp32.
 
     // compute 2^(n-1)
-    h->uni_vsubps(vmm_src, vmm_src, table_val(one));
-    h->uni_vcvtps2dq(vmm_aux2, vmm_src);
-    if (isa != avx)
-        h->uni_vpaddd(vmm_aux2, vmm_aux2, table_val(exponent_bias));
-    else {
-        Ymm ymm_aux2 = Ymm(vmm_aux2.getIdx());
-        Xmm xmm_aux2 = Xmm(vmm_aux2.getIdx());
-        h->vextractf128(xmm_tmp, ymm_aux2, 1);
-        h->vpaddd(xmm_tmp, xmm_tmp, table_val(exponent_bias));
-        h->vpaddd(xmm_aux2, xmm_aux2, table_val(exponent_bias));
-        h->vinsertf128(ymm_aux2, ymm_aux2, xmm_tmp, 1);
-    }
-    vec_shift(vmm_aux2, vmm_aux2, true /*shift_left*/, n_mantissa_bits);
-    // use vmm_src as tmp vmm_zero when applying mask
-    h->uni_vxorps(vmm_src, vmm_src, vmm_src);
-    // set zeroes at those points which were < log(FLT_MIN)
-    blend_with_mask(vmm_aux2, vmm_src);
+    // h->uni_vsubps(vmm_src, vmm_src, table_val(one));
+    // h->uni_vcvtps2dq(vmm_aux2, vmm_src);
+    // if (isa != avx)
+    //     h->uni_vpaddd(vmm_aux2, vmm_aux2, table_val(exponent_bias));
+    // else {
+    //     Ymm ymm_aux2 = Ymm(vmm_aux2.getIdx());
+    //     Xmm xmm_aux2 = Xmm(vmm_aux2.getIdx());
+    //     h->vextractf128(xmm_tmp, ymm_aux2, 1);
+    //     h->vpaddd(xmm_tmp, xmm_tmp, table_val(exponent_bias));
+    //     h->vpaddd(xmm_aux2, xmm_aux2, table_val(exponent_bias));
+    //     h->vinsertf128(ymm_aux2, ymm_aux2, xmm_tmp, 1);
+    // }
+    // vec_shift(vmm_aux2, vmm_aux2, true /*shift_left*/, n_mantissa_bits);
+    // // use vmm_src as tmp vmm_zero when applying mask
+    // h->uni_vxorps(vmm_src, vmm_src, vmm_src);
+    // // set zeroes at those points which were < log(FLT_MIN)
+    // blend_with_mask(vmm_aux2, vmm_src);
 
     // compute polynomial
-    h->uni_vmovups(vmm_src, table_val(exp_pol, 4));
-    h->uni_vfmadd213ps(vmm_src, vmm_aux1, table_val(exp_pol, 3));
-    h->uni_vfmadd213ps(vmm_src, vmm_aux1, table_val(exp_pol, 2));
-    h->uni_vfmadd213ps(vmm_src, vmm_aux1, table_val(exp_pol, 1));
-    h->uni_vfmadd213ps(vmm_src, vmm_aux1, table_val(exp_pol, 0));
-    h->uni_vfmadd213ps(vmm_src, vmm_aux1, table_val(one));
+    h->uni_vmovups(vmm_aux2, vmm_src);
+    h->uni_vmovups(vmm_src, table_val(poly_0));
+    h->uni_vfmadd213ps(vmm_src, vmm_aux2, table_val(poly_1));
+    h->uni_vfmadd213ps(vmm_src, vmm_aux2, table_val(poly_2));
+    h->uni_vfmadd213ps(vmm_src, vmm_aux2, table_val(poly_3));
+    h->uni_vfmadd213ps(vmm_src, vmm_aux2, table_val(poly_4));
+    h->uni_vfmadd213ps(vmm_src, vmm_aux2, table_val(poly_56));
+    h->uni_vfmadd213ps(vmm_src, vmm_aux2, table_val(poly_56));
     // y = y * 2^n
-    h->uni_vmulps(vmm_src, vmm_src, vmm_aux2);
-    h->uni_vmulps(vmm_src, vmm_src, table_val(two));
+    // h->uni_vmulps(vmm_src, vmm_src, vmm_aux2);
+    // h->uni_vmulps(vmm_src, vmm_src, table_val(two));
+    h->uni_vscalefps(vmm_src, vmm_src, vmm_aux1);
 }
 
 template <cpu_isa_t isa, typename Wmm>
@@ -1850,6 +1868,21 @@ void jit_uni_eltwise_injector_f32<isa, Wmm>::register_table_entries() {
             {exp_pol, {0x3c07cfce, true}} // p5 = 0.00828929059f
     };
 
+    // exp(x) consts from ONNXRT
+    static const table_t exp_onnxrt {
+        {poly_0, {0x3ab4a005, true}},
+        {poly_1, {0x3c092f6e, true}},
+        {poly_2, {0x3d2aadad, true}},
+        {poly_3, {0x3e2aaa28, true}},
+        {poly_4, {0x3efffffb, true}},
+        {poly_56, {0x3f800000, true}},
+        {log2rec, {0x3fb8aa3b, true}},
+        {log2hi, {0xbf317200, true}},
+        {log2lo, {0xb5bfbe8e, true}},
+        {lower_range, {0xc2cff1b5, true}},
+        {rounding_bias, {0x4b400000, true}}
+    };
+
     // mish(x) constants
     static const table_t mish_consts {
             {fwd_mish_max_x_for_equation_f, {0x42317217, true}},
@@ -2326,6 +2359,7 @@ void jit_uni_eltwise_injector_f32<isa, Wmm>::register_table_entries() {
     push_entries_of(common_values);
     if (need.exp()) push_entries_of(exp_consts);
     if (need.exp()) push_entries_of(exp_polynomial);
+    if (need.exp()) push_entries_of(exp_onnxrt);
     if (need.mish()) push_entries_of(mish_consts);
     if (need.tanh()) push_entries_of(tanh_consts);
     if (need.tanh()) push_entries_of(tanh_polynomial_table);
