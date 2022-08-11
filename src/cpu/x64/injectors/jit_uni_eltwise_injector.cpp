@@ -263,17 +263,17 @@ void jit_uni_eltwise_injector_f32<isa, Wmm>::exp_compute_vector_fwd(
     // get mask of values lower than log(FLT_MIN) to zero them in the output
     //compute_cmp_mask(vmm_src, table_val(exp_ln_flt_min_f), _cmp_lt_os);
 
-    h->uni_vmaxps(vmm_src, vmm_src, table_val(lower_range));
+    h->uni_vmaxps(vmm_src, vmm_src, exp_lower_range);
 
     //vfmadd213ps
     //auto m = Log2Rec * clamped_data + RoundingBias;
 
-    h->uni_vmulps(vmm_aux1, vmm_src, table_val(log2rec));
-    h->uni_vaddps(vmm_aux1, vmm_aux1, table_val(rounding_bias));
-    h->uni_vsubps(vmm_aux1, vmm_aux1, table_val(rounding_bias));
+    h->uni_vmulps(vmm_aux1, vmm_src,  exp_log2rec);
+    h->uni_vaddps(vmm_aux1, vmm_aux1, exp_rounding_bias);
+    h->uni_vsubps(vmm_aux1, vmm_aux1, exp_rounding_bias);
 
-    h->uni_vfmadd231ps(vmm_src, vmm_aux1, table_val(log2hi));
-    h->uni_vfmadd231ps(vmm_src, vmm_aux1, table_val(log2lo));
+    h->uni_vfmadd231ps(vmm_src, vmm_aux1, exp_log2hi);
+    h->uni_vfmadd231ps(vmm_src, vmm_aux1, exp_log2lo);
     
     // x += m * Log2Hi;
     // x += m * Log2Lo;
@@ -322,13 +322,13 @@ void jit_uni_eltwise_injector_f32<isa, Wmm>::exp_compute_vector_fwd(
 
     // compute polynomial
     h->uni_vmovups(vmm_aux2, vmm_src);
-    h->uni_vmovups(vmm_src, table_val(poly_0));
-    h->uni_vfmadd213ps(vmm_src, vmm_aux2, table_val(poly_1));
-    h->uni_vfmadd213ps(vmm_src, vmm_aux2, table_val(poly_2));
-    h->uni_vfmadd213ps(vmm_src, vmm_aux2, table_val(poly_3));
-    h->uni_vfmadd213ps(vmm_src, vmm_aux2, table_val(poly_4));
-    h->uni_vfmadd213ps(vmm_src, vmm_aux2, table_val(poly_56));
-    h->uni_vfmadd213ps(vmm_src, vmm_aux2, table_val(poly_56));
+    h->uni_vmovups(vmm_src, exp_poly_0);
+    h->uni_vfmadd213ps(vmm_src, vmm_aux2, exp_poly_1);
+    h->uni_vfmadd213ps(vmm_src, vmm_aux2, exp_poly_2);
+    h->uni_vfmadd213ps(vmm_src, vmm_aux2, exp_poly_3);
+    h->uni_vfmadd213ps(vmm_src, vmm_aux2, exp_poly_4);
+    h->uni_vfmadd213ps(vmm_src, vmm_aux2, exp_poly_56);
+    h->uni_vfmadd213ps(vmm_src, vmm_aux2, exp_poly_56);
     // y = y * 2^n
     // h->uni_vmulps(vmm_src, vmm_src, vmm_aux2);
     // h->uni_vmulps(vmm_src, vmm_src, table_val(two));
@@ -1664,6 +1664,7 @@ void jit_uni_eltwise_injector_f32<isa, Wmm>::compute_body(
         const injector_utils::vmm_index_set_iterator_t &start_idx_it,
         const injector_utils::vmm_index_set_iterator_t &end_idx_it) {
     using namespace alg_kind;
+
     std::for_each(start_idx_it, end_idx_it, [&](size_t idx) {
         if (is_fwd_) {
             switch (alg_) {
@@ -1786,7 +1787,20 @@ void jit_uni_eltwise_injector_f32<isa, Wmm>::compute_vector_range(
     const auto &end_idx_it = vmm_idxs.end();
     assert(*start_idx_it < *vmm_idxs.rbegin() + 1
             && *vmm_idxs.rbegin() <= vecs_count);
-
+    
+    // //if(alg_ == alg_kind::eltwise_exp) {
+    //     h -> uni_vmovups(exp_poly_0, table_val(poly_0));
+    //     h -> uni_vmovups(exp_poly_1, table_val(poly_1));
+    //     h -> uni_vmovups(exp_poly_2, table_val(poly_2));
+    //     h -> uni_vmovups(exp_poly_3, table_val(poly_3));
+    //     h -> uni_vmovups(exp_poly_4, table_val(poly_4));
+    //     h -> uni_vmovups(exp_poly_56, table_val(poly_56));
+    //     h -> uni_vmovups(exp_log2rec, table_val(log2rec));
+    //     h -> uni_vmovups(exp_log2hi, table_val(log2hi));
+    //     h -> uni_vmovups(exp_log2lo, table_val(log2lo));
+    //     h -> uni_vmovups(exp_lower_range, table_val(lower_range));
+    //     h -> uni_vmovups(exp_rounding_bias, table_val(rounding_bias));
+    // //}
     injector_preamble(vmm_idxs);
     compute_body(start_idx_tail, end_idx_it);
     injector_preamble_tail(start_idx_it);

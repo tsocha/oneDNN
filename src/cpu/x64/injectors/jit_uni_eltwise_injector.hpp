@@ -179,6 +179,17 @@ private:
     injector_utils::vmm_index_set_iterator_t start_idx_tail;
 
     Vmm vmm_mask, vmm_aux0, vmm_aux1, vmm_aux2, vmm_aux3, vmm_aux4, vmm_tmp;
+    Vmm exp_lower_range{17};
+    Vmm exp_rounding_bias{18};
+    Vmm exp_log2rec{19};
+    Vmm exp_log2hi{20};
+    Vmm exp_log2lo{21};
+    Vmm exp_poly_0{22};
+    Vmm exp_poly_1{23};
+    Vmm exp_poly_2{24};
+    Vmm exp_poly_3{25};
+    Vmm exp_poly_4{26};
+    Vmm exp_poly_56{27};
     Xbyak::Ymm ymm_tmp;
     Xbyak::Xmm xmm_tmp;
 

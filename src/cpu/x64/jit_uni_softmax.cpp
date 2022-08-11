@@ -464,6 +464,42 @@ struct jit_softmax_t<avx512_core> : public jit_softmax_base_t<avx512_core> {
                                 dst_d_.data_type(), tail);
                     }
                 }
+                Vmm exp_lower_range{17};
+                Vmm exp_rounding_bias{18};
+                Vmm exp_log2rec{19};
+                Vmm exp_log2hi{20};
+                Vmm exp_log2lo{21};
+                Vmm exp_poly_0{22};
+                Vmm exp_poly_1{23};
+                Vmm exp_poly_2{24};
+                Vmm exp_poly_3{25};
+                Vmm exp_poly_4{26};
+                Vmm exp_poly_56{27};
+
+                std::uint32_t exp_consts[] = {0x3ab4a005,
+                                                                   0x3c092f6e,
+                                                                   0x3d2aadad,
+                                                                   0x3e2aaa28,
+                                                                   0x3efffffb,
+                                                                   0x3f800000,
+                                                                   0x3fb8aa3b,
+                                                                   0xbf317200,
+                                                                   0xb5bfbe8e,
+                                                                   0xc2cff1b5,
+                                                                   0x4b400000};
+                float* exp_consts_fp = reinterpret_cast<float*>(exp_consts);
+                uni_vbroadcastss(exp_poly_0,        ptr[&(exp_consts_fp[0 ])]);
+                uni_vbroadcastss(exp_poly_1,        ptr[&(exp_consts_fp[1 ])]);
+                uni_vbroadcastss(exp_poly_2,        ptr[&(exp_consts_fp[2 ])]);
+                uni_vbroadcastss(exp_poly_3,        ptr[&(exp_consts_fp[3 ])]);
+                uni_vbroadcastss(exp_poly_4,        ptr[&(exp_consts_fp[4 ])]);
+                uni_vbroadcastss(exp_poly_56,       ptr[&(exp_consts_fp[5 ])]);
+                uni_vbroadcastss(exp_log2rec,       ptr[&(exp_consts_fp[6 ])]);
+                uni_vbroadcastss(exp_log2hi,        ptr[&(exp_consts_fp[7 ])]);
+                uni_vbroadcastss(exp_log2lo,        ptr[&(exp_consts_fp[8 ])]);
+                uni_vbroadcastss(exp_lower_range,   ptr[&(exp_consts_fp[9 ])]);
+                uni_vbroadcastss(exp_rounding_bias, ptr[&(exp_consts_fp[10])]);
+
                 exp_injector_->compute_vector(vreg_tmp_src.getIdx());
                 if (tail)
                     uni_vaddps(vsum | tail_opmask, vsum, vreg_tmp_src);
