@@ -183,7 +183,7 @@ private:
     Vmm exp_rounding_bias{18};
     Vmm exp_log2rec{19};
     Vmm exp_log2hi{20};
-    Vmm exp_log2lo{21};
+    Vmm exp_log2lo{16};
     Vmm exp_poly_0{22};
     Vmm exp_poly_1{23};
     Vmm exp_poly_2{24};
