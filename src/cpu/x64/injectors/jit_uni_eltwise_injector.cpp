@@ -1174,6 +1174,31 @@ void jit_uni_eltwise_injector_f32<isa, Wmm>::gelu_erf_compute_vector_fwd(
     // -exp(-x*x)
     h->uni_vmulps(vmm_src, vmm_src, vmm_src);
     h->uni_vxorps(vmm_src, vmm_src, table_val(sign_mask));
+
+    Vmm exp_lower_range{17};
+    Vmm exp_rounding_bias{18};
+    Vmm exp_log2rec{19};
+    Vmm exp_log2hi{20};
+    Vmm exp_log2lo{16};
+    Vmm exp_poly_0{22};
+    Vmm exp_poly_1{23};
+    Vmm exp_poly_2{24};
+    Vmm exp_poly_3{25};
+    Vmm exp_poly_4{26};
+    Vmm exp_poly_56{27};
+
+    h->uni_vmovups(exp_poly_0, table_val(poly_0));
+    h->uni_vmovups(exp_poly_1, table_val(poly_1));
+    h->uni_vmovups(exp_poly_2, table_val(poly_2));
+    h->uni_vmovups(exp_poly_3, table_val(poly_3));
+    h->uni_vmovups(exp_poly_4, table_val(poly_4));
+    h->uni_vmovups(exp_poly_56, table_val(poly_56));
+    h->uni_vmovups(exp_log2rec, table_val(log2rec));
+    h->uni_vmovups(exp_log2hi, table_val(log2hi));
+    h->uni_vmovups(exp_log2lo, table_val(log2lo));
+    h->uni_vmovups(exp_lower_range, table_val(lower_range));
+    h->uni_vmovups(exp_rounding_bias, table_val(rounding_bias));
+
     exp_compute_vector_fwd(vmm_src); // pollutes aux1, aux2
     h->uni_vxorps(vmm_src, vmm_src, table_val(sign_mask));
 
