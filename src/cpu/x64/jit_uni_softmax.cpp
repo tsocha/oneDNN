@@ -461,40 +461,40 @@ struct jit_softmax_t<avx512_core> : public jit_softmax_base_t<avx512_core> {
         Vmm exp_poly_4{26};
         Vmm exp_poly_56{27};
 
-        // std::uint32_t exp_consts[] = {0x3ab4a005,
-        //                               0x3c092f6e,
-        //                               0x3d2aadad,
-        //                               0x3e2aaa28,
-        //                               0x3efffffb,
-        //                               0x3f800000,
-        //                               0x3fb8aa3b,
-        //                               0xbf317200,
-        //                               0xb5bfbe8e,
-        //                               0xc2cff1b5,
-        //                               0x4b400000};
-        // float* exp_consts_fp = reinterpret_cast<float*>(exp_consts);
-        // dd(0x3ab4a005);
-        // dd(0x3c092f6e);
-        // dd(0x3d2aadad);
-        // dd(0x3e2aaa28);
-        // dd(0x3efffffb);
-        // dd(0x3f800000);
-        // dd(0x3fb8aa3b);
-        // dd(0xbf317200);
-        // dd(0xb5bfbe8e);
-        // dd(0xc2cff1b5);
-        // dd(0x4b400000);
-        // uni_vbroadcastss(exp_poly_0,        ptr[(uint64_t)0]);
-        // uni_vbroadcastss(exp_poly_1,        ptr[(uint64_t)1]);
-        // uni_vbroadcastss(exp_poly_2,        ptr[(uint64_t)2]);
-        // uni_vbroadcastss(exp_poly_3,        ptr[(uint64_t)3]);
-        // uni_vbroadcastss(exp_poly_4,        ptr[(uint64_t)4]);
-        // uni_vbroadcastss(exp_poly_56,       ptr[(uint64_t)5]);
-        // uni_vbroadcastss(exp_log2rec,       ptr[(uint64_t)6]);
-        // uni_vbroadcastss(exp_log2hi,        ptr[(uint64_t)7]);
-        // uni_vbroadcastss(exp_log2lo,        ptr[(uint64_t)8]);
-        // uni_vbroadcastss(exp_lower_range,   ptr[(uint64_t)9]);
-        // uni_vbroadcastss(exp_rounding_bias, ptr[(uint64_t)10]);
+        Xmm xreg_temp(15);
+        mov(reg_tmp, utils::bit_cast<int>(0x3ab4a005));
+        uni_vmovq(xreg_temp, reg_tmp);
+        uni_vbroadcastss(exp_poly_0,        xreg_temp);
+        mov(reg_tmp, utils::bit_cast<int>(0x3c092f6e));
+        uni_vmovq(xreg_temp, reg_tmp);
+        uni_vbroadcastss(exp_poly_1,        xreg_temp);
+        mov(reg_tmp, utils::bit_cast<int>(0x3d2aadad));
+        uni_vmovq(xreg_temp, reg_tmp);
+        uni_vbroadcastss(exp_poly_2,        xreg_temp);
+        mov(reg_tmp, utils::bit_cast<int>(0x3e2aaa28));
+        uni_vmovq(xreg_temp, reg_tmp);
+        uni_vbroadcastss(exp_poly_3,        xreg_temp);
+        mov(reg_tmp, utils::bit_cast<int>(0x3efffffb));
+        uni_vmovq(xreg_temp, reg_tmp);
+        uni_vbroadcastss(exp_poly_4,        xreg_temp);
+        mov(reg_tmp, utils::bit_cast<int>(0x3f800000));
+        uni_vmovq(xreg_temp, reg_tmp);
+        uni_vbroadcastss(exp_poly_56,       xreg_temp);
+        mov(reg_tmp, utils::bit_cast<int>(0x3fb8aa3b));
+        uni_vmovq(xreg_temp, reg_tmp);
+        uni_vbroadcastss(exp_log2rec,       xreg_temp);
+        mov(reg_tmp, utils::bit_cast<int>(0xbf317200));
+        uni_vmovq(xreg_temp, reg_tmp);
+        uni_vbroadcastss(exp_log2hi,        xreg_temp);
+        mov(reg_tmp, utils::bit_cast<int>(0xb5bfbe8e));
+        uni_vmovq(xreg_temp, reg_tmp);
+        uni_vbroadcastss(exp_log2lo,        xreg_temp);
+        mov(reg_tmp, utils::bit_cast<int>(0xc2cff1b5));
+        uni_vmovq(xreg_temp, reg_tmp);
+        uni_vbroadcastss(exp_lower_range,   xreg_temp);
+        mov(reg_tmp, utils::bit_cast<int>(0x4b400000));
+        uni_vmovq(xreg_temp, reg_tmp);
+        uni_vbroadcastss(exp_rounding_bias, xreg_temp);
 
         axis_loop([&](int unroll, bool tail = false) {
             for (int i = 0; i < unroll; i++) {
